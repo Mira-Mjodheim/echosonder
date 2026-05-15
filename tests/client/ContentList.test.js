@@ -1,4 +1,3 @@
-```javascript
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
@@ -71,4 +70,3 @@ describe('ContentList component', () => {
     expect(getByText('Error: Failed to fetch contents')).toBeInTheDocument();
   });
 });
-```
