@@ -1,53 +1,101 @@
 # EchoSonder
 
-EchoSonder est une application web qui permet aux utilisateurs de créer et de partager des échos, des sons et des vibrations qui reflètent leurs émotions et leurs pensées.
+EchoSonder est une plateforme web pour créer et partager des **échos sonores** — des enregistrements audio qui reflètent vos émotions, vos pensées, et vos vibrations intérieures.
+
+## Technologies
+
+- **Front-end** : React 18
+- **Back-end** : Node.js / Express
+- **Base de données** : MongoDB (Mongoose)
+- **Auth** : JWT + bcrypt
 
 ## Prérequis
 
-* Node.js (version 16 ou supérieure)
-* MongoDB (version 4 ou supérieure)
-* npm (version 8 ou supérieure)
+- Node.js 16+
+- MongoDB 5+
+- npm 8+
 
 ## Installation
 
-1. Cloner le repository : `git clone https://github.com/votre-repo/echo-sonder.git`
-2. Installer les dépendances : `npm install`
-3. Créer un fichier `.env` à la racine du projet avec les variables d'environnement suivantes :
-	* `MONGO_URI`: l'URI de connexion à votre base de données MongoDB
-	* `PORT`: le port sur lequel l'application sera écoutée (par défaut 3000)
-4. Lancer l'application : `npm start`
+```bash
+git clone https://github.com/Mira-Mjodheim/echosonder.git
+cd echosonder
+npm install
+```
+
+Créer un fichier `.env` à la racine :
+
+```
+MONGO_URI=mongodb://localhost:27017/echosonder
+PORT=3001
+JWT_SECRET=votre-secret-jwt
+CORS_ORIGIN=http://localhost:3000
+```
 
 ## Démarrage
 
-L'application est accessible à l'adresse `http://localhost:3000` (ou sur le port que vous avez spécifié dans le fichier `.env`).
+```bash
+# Serveur API (port 3001)
+npm start
 
-## Technologie
+# Front-end React (port 3000, dans un second terminal)
+npm run client
+```
 
-* Front-end : React
-* Back-end : Node.js
-* Base de données : MongoDB
+## Structure
 
-## Structure du projet
-
-* `client` : code React pour le front-end
-* `server` : code Node.js pour le back-end
-* `models` : modèles de données pour MongoDB
-
-## Commandes npm
-
-* `npm start` : lancer l'application
-* `npm run build` : construire l'application pour la production
-* `npm run test` : exécuter les tests unitaires
+```
+├── client/          # Application React
+│   └── src/
+│       ├── components/  # ContentEditor, ContentList, UserProfile
+│       └── containers/  # App
+├── server/          # API Express
+│   ├── controllers/ # ContentController, UserController
+│   ├── middleware/  # auth (JWT)
+│   ├── models/      # Content, User
+│   └── routes/      # /api/contents, /api/users
+└── tests/           # Tests serveur (Jest + Supertest)
+```
 
 ## API
 
-L'API est documentée à l'aide de Swagger. Vous pouvez accéder à la documentation à l'adresse `http://localhost:3000/api-docs`.
+### Authentification
 
-## Sécurité
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| POST | `/api/users/register` | Inscription |
+| POST | `/api/users/login` | Connexion → renvoie un JWT |
+| GET | `/api/users/me` | Profil (auth requis) |
 
-* Les mots de passe sont stockés avec un hash bcrypt
-* Les données sensibles sont chiffrées avec une clé secrète
+### Échos
 
-## Contributing
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| GET | `/api/contents` | Liste tous les échos |
+| GET | `/api/contents/:id` | Détail d'un écho |
+| POST | `/api/contents` | Créer un écho (auth requis) |
+| PUT | `/api/contents/:id` | Modifier un écho (auth requis) |
+| DELETE | `/api/contents/:id` | Supprimer un écho (auth requis) |
 
-Si vous souhaitez contribuer au projet, merci de lire les guidelines de contribution dans le fichier `CONTRIBUTING.md`.
+### Modèle d'un écho
+
+```json
+{
+  "title": "Pluie sur les toits",
+  "description": "Ce que j'entends depuis ma fenêtre un soir de novembre",
+  "audioUrl": "https://cdn.example.com/echos/pluie.mp3",
+  "duration": 42,
+  "mood": "mélancolie",
+  "tags": ["pluie", "urbain", "nuit"],
+  "type": "ambient"
+}
+```
+
+`mood` : `joie | mélancolie | calme | énergie | nostalgie | mystère | autre`
+`type` : `audio | ambient | vocal | instrumental`
+
+## Tests
+
+```bash
+npm test
+```
