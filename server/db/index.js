@@ -1,4 +1,3 @@
-```javascript
 const mongoose = require('mongoose');
 const config = require('../config');
 
@@ -24,4 +23,3 @@ db.once('open', () => {
 });
 
 module.exports = connectDB;
-```
