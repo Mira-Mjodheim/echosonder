@@ -1,8 +1,11 @@
-```javascript
 const request = require('supertest');
-const app = require('../app');
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+const app = require('../../server/app');
+const User = require('../../server/models/User');
+
+afterAll(async () => {
+  await mongoose.connection.close();
+});
 
 describe('UserController', () => {
   beforeEach(async () => {
@@ -10,124 +13,117 @@ describe('UserController', () => {
   });
 
   describe('POST /api/users/register', () => {
-    it('devrait créer un nouvel utilisateur', async () => {
-      const user = {
-        username: 'testuser',
-        email: 'test@example.com',
-        password: 'password123',
-      };
-
-      const response = await request(app).post('/api/users/register').send(user);
-      expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('token');
+    it('crée un utilisateur et retourne un token', async () => {
+      const res = await request(app).post('/api/users/register').send({
+        name: 'Test User', email: 'test@example.com', password: 'password123',
+      });
+      expect(res.status).toBe(201);
+      expect(res.body).toHaveProperty('token');
+      expect(res.body.user).toHaveProperty('name', 'Test User');
     });
 
-    it('devrait retourner une erreur pour un utilisateur existant', async () => {
-      const user = new User({
-        username: 'testuser',
-        email: 'test@example.com',
-        password: await bcrypt.hash('password123', 10),
+    it('retourne 400 pour un email déjà utilisé', async () => {
+      await request(app).post('/api/users/register').send({
+        name: 'Existing', email: 'test@example.com', password: 'pass123',
       });
-      await user.save();
+      const res = await request(app).post('/api/users/register').send({
+        name: 'New User', email: 'test@example.com', password: 'password123',
+      });
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('message');
+    });
 
-      const response = await request(app).post('/api/users/register').send(user);
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('message');
+    it('retourne 400 si name est absent', async () => {
+      const res = await request(app).post('/api/users/register').send({
+        email: 'test@example.com', password: 'password123',
+      });
+      expect(res.status).toBe(400);
     });
   });
 
   describe('POST /api/users/login', () => {
-    it('devrait retourner un token pour un utilisateur existant', async () => {
-      const user = new User({
-        username: 'testuser',
-        email: 'test@example.com',
-        password: await bcrypt.hash('password123', 10),
+    it('retourne un token pour identifiants valides', async () => {
+      await request(app).post('/api/users/register').send({
+        name: 'Login User', email: 'login@example.com', password: 'password123',
       });
-      await user.save();
-
-      const response = await request(app).post('/api/users/login').send({
-        email: 'test@example.com',
-        password: 'password123',
+      const res = await request(app).post('/api/users/login').send({
+        email: 'login@example.com', password: 'password123',
       });
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('token');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('token');
     });
 
-    it('devrait retourner une erreur pour des informations d\'identification incorrectes', async () => {
-      const response = await request(app).post('/api/users/login').send({
-        email: 'test@example.com',
-        password: 'wrongpassword',
+    it('retourne 401 pour mot de passe incorrect', async () => {
+      await request(app).post('/api/users/register').send({
+        name: 'Login User', email: 'login@example.com', password: 'password123',
       });
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message');
+      const res = await request(app).post('/api/users/login').send({
+        email: 'login@example.com', password: 'wrong',
+      });
+      expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('message');
+    });
+
+    it('retourne 404 pour un email inexistant', async () => {
+      const res = await request(app).post('/api/users/login').send({
+        email: 'nobody@example.com', password: 'pass',
+      });
+      expect(res.status).toBe(404);
     });
   });
 
   describe('GET /api/users/me', () => {
-    it('devrait retourner les informations de l\'utilisateur connecté', async () => {
-      const user = new User({
-        username: 'testuser',
-        email: 'test@example.com',
-        password: await bcrypt.hash('password123', 10),
+    it('retourne le profil de l'utilisateur authentifié', async () => {
+      const regRes = await request(app).post('/api/users/register').send({
+        name: 'Me User', email: 'me@example.com', password: 'password123',
       });
-      await user.save();
-
-      const response = await request(app).get('/api/users/me').set("Authorization", `Bearer ${user._id}`);
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('username');
-      expect(response.body).toHaveProperty('email');
+      const token = regRes.body.token;
+      const res = await request(app)
+        .get('/api/users/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('name', 'Me User');
+      expect(res.body).toHaveProperty('email', 'me@example.com');
+      expect(res.body).not.toHaveProperty('password');
     });
 
-    it('devrait retourner une erreur pour un token invalide', async () => {
-      const response = await request(app).get('/api/users/me').set("Authorization", 'Bearer invalidtoken');
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message');
-    });
-  });
-
-  describe('PATCH /api/users/me', () => {
-    it('devrait mettre à jour les informations de l\'utilisateur connecté', async () => {
-      const user = new User({
-        username: 'testuser',
-        email: 'test@example.com',
-        password: await bcrypt.hash('password123', 10),
-      });
-      await user.save();
-
-      const response = await request(app).patch('/api/users/me').set("Authorization", `Bearer ${user._id}`).send({
-        username: 'newusername',
-      });
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('username', 'newusername');
-    });
-
-    it('devrait retourner une erreur pour un token invalide', async () => {
-      const response = await request(app).patch('/api/users/me').set("Authorization", 'Bearer invalidtoken').send({
-        username: 'newusername',
-      });
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message');
+    it('retourne 401 sans token', async () => {
+      const res = await request(app).get('/api/users/me');
+      expect(res.status).toBe(401);
     });
   });
 
-  describe('DELETE /api/users/me', () => {
-    it('devrait supprimer l\'utilisateur connecté', async () => {
-      const user = new User({
-        username: 'testuser',
-        email: 'test@example.com',
-        password: await bcrypt.hash('password123', 10),
+  describe('PUT /api/users/:id', () => {
+    it('met à jour les informations d'un utilisateur', async () => {
+      const regRes = await request(app).post('/api/users/register').send({
+        name: 'Update User', email: 'update@example.com', password: 'password123',
       });
-      await user.save();
-
-      const response = await request(app).delete('/api/users/me').set("Authorization", `Bearer ${user._id}`);
-      expect(response.status).toBe(200);
+      const { token, user } = regRes.body;
+      const res = await request(app)
+        .put(`/api/users/${user._id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Updated Name' });
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('name', 'Updated Name');
     });
 
-    it('devrait retourner une erreur pour un token invalide', async () => {
-      const response = await request(app).delete('/api/users/me').set("Authorization", 'Bearer invalidtoken');
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message');
+    it('retourne 401 sans token', async () => {
+      const res = await request(app).put('/api/users/000000000000000000000000').send({ name: 'x' });
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('DELETE /api/users/:id', () => {
+    it('supprime un utilisateur', async () => {
+      const regRes = await request(app).post('/api/users/register').send({
+        name: 'Delete User', email: 'delete@example.com', password: 'password123',
+      });
+      const { token, user } = regRes.body;
+      const res = await request(app)
+        .delete(`/api/users/${user._id}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('message');
     });
   });
 });
-```
