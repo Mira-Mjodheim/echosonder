@@ -1,82 +1,71 @@
-```javascript
-const express = require('express');
-const router = express.Router();
 const Content = require('../models/Content');
-const User = require('../models/User');
-const { validateContent } = require('../utils/validators');
 const mongoose = require('mongoose');
 
-router.get('/', async (req, res) => {
-    try {
-        const contents = await Content.find().populate('author', '_id name');
-        res.json(contents);
-    } catch (err) {
-        res.status(500).json({ message: 'Erreur lors de la récupération des contenus' });
-    }
-});
+const getAllContents = async (req, res) => {
+  try {
+    const contents = await Content.find()
+      .populate('userId', '_id name email')
+      .sort('-createdAt');
+    res.json(contents);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de la récupération des échos' });
+  }
+};
 
-router.get('/:id', async (req, res) => {
-    try {
-        const id = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: 'ID de contenu invalide' });
-        }
-        const content = await Content.findById(id).populate('author', '_id name');
-        if (!content) {
-            return res.status(404).json({ message: 'Contenu non trouvé' });
-        }
-        res.json(content);
-    } catch (err) {
-        res.status(500).json({ message: 'Erreur lors de la récupération du contenu' });
-    }
-});
+const getContentById = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ message: 'ID invalide' });
+    const content = await Content.findById(req.params.id).populate('userId', '_id name email');
+    if (!content) return res.status(404).json({ message: 'Écho non trouvé' });
+    res.json(content);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de la récupération' });
+  }
+};
 
-router.post('/', async (req, res) => {
-    try {
-        const { error } = validateContent(req.body);
-        if (error) {
-            return res.status(400).json({ message: 'Données invalides', details: error.details[0].message });
-        }
-        const content = new Content({ ...req.body, author: req.user._id });
-        await content.save();
-        res.status(201).json(content);
-    } catch (err) {
-        res.status(500).json({ message: 'Erreur lors de la création du contenu' });
-    }
-});
+const createContent = async (req, res) => {
+  try {
+    const { title, description, audioUrl, duration, mood, tags, type } = req.body;
+    if (!title || !title.trim())
+      return res.status(400).json({ message: "'title' est requis" });
+    const userId = (req.user && req.user.userId)
+      ? req.user.userId
+      : new mongoose.Types.ObjectId();
+    const content = new Content({ title, description, audioUrl, duration, mood, tags, type, userId });
+    await content.save();
+    res.status(201).json(content);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de la création' });
+  }
+};
 
-router.put('/:id', async (req, res) => {
-    try {
-        const id = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: 'ID de contenu invalide' });
-        }
-        const { error } = validateContent(req.body);
-        if (error) {
-            return res.status(400).json({ message: 'Données invalides', details: error.details[0].message });
-        }
-        const content = await Content.findByIdAndUpdate(id, req.body, { new: true });
-        if (!content) {
-            return res.status(404).json({ message: 'Contenu non trouvé' });
-        }
-        res.json(content);
-    } catch (err) {
-        res.status(500).json({ message: 'Erreur lors de la mise à jour du contenu' });
-    }
-});
+const updateContent = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ message: 'ID invalide' });
+    const updates = { ...req.body, updatedAt: new Date() };
+    delete updates._id;
+    const content = await Content.findByIdAndUpdate(
+      req.params.id, updates, { new: true, runValidators: true }
+    );
+    if (!content) return res.status(404).json({ message: 'Écho non trouvé' });
+    res.json(content);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de la mise à jour' });
+  }
+};
 
-router.delete('/:id', async (req, res) => {
-    try {
-        const id = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: 'ID de contenu invalide' });
-        }
-        await Content.findByIdAndRemove(id);
-        res.json({ message: 'Contenu supprimé avec succès' });
-    } catch (err) {
-        res.status(500).json({ message: 'Erreur lors de la suppression du contenu' });
-    }
-});
+const deleteContent = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ message: 'ID invalide' });
+    const content = await Content.findByIdAndDelete(req.params.id);
+    if (!content) return res.status(404).json({ message: 'Écho non trouvé' });
+    res.json({ message: 'Écho supprimé avec succès' });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de la suppression' });
+  }
+};
 
-module.exports = router;
-```
+module.exports = { getAllContents, getContentById, createContent, updateContent, deleteContent };
