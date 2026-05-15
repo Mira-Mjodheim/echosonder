@@ -1,5 +1,6 @@
 module.exports = {
   testEnvironment: 'node',
-  testPathPattern: 'tests/server',
+  testMatch: ['**/tests/server/**/*.test.js'],
+  transform: {},
   testTimeout: 15000,
 };
