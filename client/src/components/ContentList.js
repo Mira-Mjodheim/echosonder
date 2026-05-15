@@ -1,4 +1,3 @@
-```javascript
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -45,4 +44,3 @@ const ContentList = () => {
 };
 
 export default ContentList;
-```
