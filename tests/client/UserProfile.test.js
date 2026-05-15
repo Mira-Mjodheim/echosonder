@@ -1,4 +1,3 @@
-```javascript
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
@@ -76,4 +75,3 @@ describe('UserProfile component', () => {
     expect(getByText('Erreur lors du chargement du profil')).toBeInTheDocument();
   });
 });
-```
