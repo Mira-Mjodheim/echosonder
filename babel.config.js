@@ -1,4 +1,3 @@
-```javascript
 module.exports = {
   presets: [
     ['@babel/preset-env', { targets: { browsers: ['>= browserslist@1.53.0'] } }],
@@ -10,4 +9,3 @@ module.exports = {
     '@babel/plugin-transform-runtime'
   ]
 };
-```
