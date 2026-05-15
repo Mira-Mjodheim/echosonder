@@ -1,23 +1,26 @@
-```javascript
+require('dotenv').config();
 const express = require('express');
-const app = express();
+const cors = require('cors');
 const mongoose = require('mongoose');
-const config = require('./config');
-const contentRoutes = require('./routes/content');
-const userRoutes = require('./routes/user');
 
+const app = express();
+
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/echosonder';
+const PORT = process.env.PORT || 3001;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
+
+app.use(cors({ origin: CORS_ORIGIN, methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS' }));
 app.use(express.json());
 
-mongoose.connect(config.db.uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('Connexion à MongoDB réussie'))
-.catch(err => console.error('Erreur de connexion à MongoDB', err));
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('Connexion à MongoDB réussie'))
+  .catch(err => console.error('Erreur de connexion à MongoDB', err));
 
-app.use('/api/contents', contentRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/contents', require('./routes/content'));
+app.use('/api/users',    require('./routes/user'));
 
-const port = config.server.port;
-app.listen(port, () => console.log(`Serveur lancé sur le port ${port}`));
-```
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`EchoSonder démarré sur le port ${PORT}`));
+}
+
+module.exports = app;
