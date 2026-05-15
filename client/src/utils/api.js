@@ -1,4 +1,3 @@
-```javascript
 import axios from 'axios';
 
 const api = axios.create({
@@ -110,4 +109,3 @@ export const register = async (user) => {
     throw error;
   }
 };
-```
