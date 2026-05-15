@@ -13,7 +13,7 @@ describe('UserController', () => {
   });
 
   describe('POST /api/users/register', () => {
-    it('crée un utilisateur et retourne un token', async () => {
+    it('cree un utilisateur et retourne un token', async () => {
       const res = await request(app).post('/api/users/register').send({
         name: 'Test User', email: 'test@example.com', password: 'password123',
       });
@@ -22,7 +22,7 @@ describe('UserController', () => {
       expect(res.body.user).toHaveProperty('name', 'Test User');
     });
 
-    it('retourne 400 pour un email déjà utilisé', async () => {
+    it('retourne 400 pour un email deja utilise', async () => {
       await request(app).post('/api/users/register').send({
         name: 'Existing', email: 'test@example.com', password: 'pass123',
       });
@@ -73,7 +73,7 @@ describe('UserController', () => {
   });
 
   describe('GET /api/users/me', () => {
-    it('retourne le profil de l'utilisateur authentifié', async () => {
+    it('retourne le profil de utilisateur authentifie', async () => {
       const regRes = await request(app).post('/api/users/register').send({
         name: 'Me User', email: 'me@example.com', password: 'password123',
       });
@@ -94,7 +94,7 @@ describe('UserController', () => {
   });
 
   describe('PUT /api/users/:id', () => {
-    it('met à jour les informations d'un utilisateur', async () => {
+    it("met a jour les informations d'un utilisateur", async () => {
       const regRes = await request(app).post('/api/users/register').send({
         name: 'Update User', email: 'update@example.com', password: 'password123',
       });
@@ -108,13 +108,15 @@ describe('UserController', () => {
     });
 
     it('retourne 401 sans token', async () => {
-      const res = await request(app).put('/api/users/000000000000000000000000').send({ name: 'x' });
+      const res = await request(app)
+        .put('/api/users/000000000000000000000000')
+        .send({ name: 'x' });
       expect(res.status).toBe(401);
     });
   });
 
   describe('DELETE /api/users/:id', () => {
-    it('supprime un utilisateur', async () => {
+    it("supprime un utilisateur", async () => {
       const regRes = await request(app).post('/api/users/register').send({
         name: 'Delete User', email: 'delete@example.com', password: 'password123',
       });
