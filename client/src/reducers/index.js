@@ -1,4 +1,3 @@
-```javascript
 import { combineReducers } from 'redux';
 import userReducer from './userReducer';
 import contentReducer from './contentReducer';
@@ -110,4 +109,3 @@ const authReducer = (state = initialState, action) => {
 };
 
 export default authReducer;
-```
