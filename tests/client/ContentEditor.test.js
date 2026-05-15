@@ -1,4 +1,3 @@
-```javascript
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
@@ -69,4 +68,3 @@ describe('ContentEditor component', () => {
     await waitFor(() => expect(getByText('Contenu enregistré avec succès')).toBeInTheDocument());
   });
 });
-```
