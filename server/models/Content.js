@@ -1,8 +1,6 @@
-```javascript
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-const contentSchema = new Schema({
+const contentSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
@@ -10,33 +8,41 @@ const contentSchema = new Schema({
   },
   description: {
     type: String,
-    trim: true
+    trim: true,
+    default: ''
+  },
+  audioUrl: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  duration: {
+    type: Number,
+    default: 0
+  },
+  mood: {
+    type: String,
+    enum: ['joie', 'mélancolie', 'calme', 'énergie', 'nostalgie', 'mystère', 'autre'],
+    default: 'autre'
+  },
+  tags: {
+    type: [String],
+    default: []
   },
   type: {
     type: String,
-    enum: ['text', 'image', 'video', 'audio'],
-    required: true
-  },
-  url: {
-    type: String,
-    trim: true
+    enum: ['audio', 'ambient', 'vocal', 'instrumental'],
+    default: 'audio'
   },
   userId: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
-contentSchema.index({ title: 'text', description: 'text' });
+contentSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 module.exports = mongoose.model('Content', contentSchema);
-```
