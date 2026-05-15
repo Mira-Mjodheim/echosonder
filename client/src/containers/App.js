@@ -1,4 +1,3 @@
-```javascript
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ContentEditor from '../components/ContentEditor';
@@ -84,4 +83,3 @@ function App() {
 }
 
 export default App;
-```
