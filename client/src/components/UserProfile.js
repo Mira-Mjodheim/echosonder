@@ -1,4 +1,3 @@
-```javascript
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -42,4 +41,3 @@ const UserProfile = () => {
 };
 
 export default UserProfile;
-```
