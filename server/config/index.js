@@ -1,4 +1,3 @@
-```javascript
 const env = require('./env');
 
 const config = {
@@ -26,4 +25,3 @@ const config = {
 };
 
 module.exports = config;
-```
