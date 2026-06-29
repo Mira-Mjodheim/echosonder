@@ -29,9 +29,10 @@ const createContent = async (req, res) => {
     const { title, description, audioUrl, duration, mood, tags, type } = req.body;
     if (!title || !title.trim())
       return res.status(400).json({ message: "'title' est requis" });
-    const userId = (req.user && req.user.userId)
-      ? req.user.userId
-      : new mongoose.Types.ObjectId();
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentification requise' });
+    }
     const content = new Content({ title, description, audioUrl, duration, mood, tags, type, userId });
     await content.save();
     res.status(201).json(content);

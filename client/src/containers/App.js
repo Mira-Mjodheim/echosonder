@@ -10,7 +10,7 @@ function App() {
   const [selectedContent, setSelectedContent] = useState(null);
 
   useEffect(() => {
-    axios.get('/api/user/profile')
+    axios.get('/api/users/me')
       .then(response => {
         setUser(response.data);
       })
