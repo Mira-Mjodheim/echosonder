@@ -7,14 +7,10 @@ const config = {
     host: env.HOST || 'localhost',
   },
   database: {
-    uri: env.DB_URI || 'mongodb://localhost:27017/echosonder',
-    options: {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    },
+    uri: env.MONGO_URI,
   },
   jwt: {
-    secret: env.JWT_SECRET || 'secret',
+    secret: env.JWT_SECRET,
     expiresIn: env.JWT_EXPIRES_IN || '1h',
   },
   cors: {

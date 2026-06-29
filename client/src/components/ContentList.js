@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const ContentList = () => {
-  const [contents, setContents] = useState([]);
-  const [loading, setLoading] = useState(true);
+const ContentList = ({ contents: propContents, onSelectContent }) => {
+  const [contents, setContents] = useState(propContents || []);
+  const [loading, setLoading] = useState(!propContents);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (propContents && propContents.length > 0) {
+      setContents(propContents);
+      setLoading(false);
+      return;
+    }
+
     const fetchContents = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/contents');
+        const response = await axios.get('/api/contents');
         setContents(response.data);
       } catch (error) {
         setError(error.message);
@@ -18,7 +24,7 @@ const ContentList = () => {
       }
     };
     fetchContents();
-  }, []);
+  }, [propContents]);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -33,7 +39,7 @@ const ContentList = () => {
       <h1>Content List</h1>
       <ul>
         {contents.map((content) => (
-          <li key={content._id}>
+          <li key={content._id} onClick={() => onSelectContent?.(content)} style={{ cursor: 'pointer' }}>
             <h2>{content.title}</h2>
             <p>{content.description}</p>
           </li>

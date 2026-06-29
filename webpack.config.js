@@ -34,7 +34,7 @@ module.exports = {
   ],
   devtool: 'eval-source-map',
   devServer: {
-    contentBase: './build',
+    static: './build',
     hot: true,
     port: 3000,
     historyApiFallback: true,
