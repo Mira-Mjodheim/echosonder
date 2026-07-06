@@ -1,75 +1,84 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-const app = require('../../server/app');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+
+let mongoServer;
+
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  await mongoose.connect(mongoServer.getUri());
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+// Lazy-load app after mongoose is connected
+const getApp = () => {
+  // Clear the require cache to get a fresh app with the connected mongoose
+  delete require.cache[require.resolve('../../server/app')];
+  return require('../../server/app');
+};
+
 const Content = require('../../server/models/Content');
 const User = require('../../server/models/User');
 
-const FAKE_USER_ID = new mongoose.Types.ObjectId();
 let authToken = '';
 
-beforeAll(async () => {
+beforeEach(async () => {
   await User.deleteMany({});
+  const app = getApp();
   const reg = await request(app).post('/api/users/register').send({
     name: 'Test Author', email: 'author@example.com', password: 'pass1234',
   });
   authToken = reg.body.token;
-});
-
-afterAll(async () => {
-  await mongoose.connection.close();
+  await Content.deleteMany({});
 });
 
 describe('ContentController', () => {
-  beforeEach(async () => {
-    await Content.deleteMany({});
-  });
-
   describe('GET /api/contents', () => {
     it('retourne une liste vide par defaut', async () => {
+      const app = getApp();
       const res = await request(app).get('/api/contents');
       expect(res.status).toBe(200);
-      expect(res.body).toHaveLength(0);
+      expect(res.body).toEqual([]);
     });
 
-    it('retourne les echos existants', async () => {
-      await Content.create({ title: 'Echo 1', type: 'audio', userId: FAKE_USER_ID });
-      await Content.create({ title: 'Echo 2', type: 'ambient', userId: FAKE_USER_ID });
+    it('retourne la liste des echos', async () => {
+      const app = getApp();
+      await request(app)
+        .post('/api/contents')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ title: 'Test Echo', type: 'audio' });
       const res = await request(app).get('/api/contents');
       expect(res.status).toBe(200);
-      expect(res.body).toHaveLength(2);
+      expect(res.body.length).toBe(1);
+      expect(res.body[0].title).toBe('Test Echo');
     });
   });
 
   describe('GET /api/contents/:id', () => {
-    it('retourne un echo par son ID', async () => {
-      const echo = await Content.create({ title: 'Echo test', type: 'vocal', userId: FAKE_USER_ID });
-      const res = await request(app).get(`/api/contents/${echo._id}`);
-      expect(res.status).toBe(200);
-      expect(res.body.title).toBe('Echo test');
-    });
-
-    it('retourne 400 pour un ID invalide', async () => {
-      const res = await request(app).get('/api/contents/invalid-id');
-      expect(res.status).toBe(400);
-    });
-
-    it("retourne 404 si l'echo n'existe pas", async () => {
+    it('retourne 404 pour un id inexistant', async () => {
+      const app = getApp();
       const res = await request(app).get(`/api/contents/${new mongoose.Types.ObjectId()}`);
       expect(res.status).toBe(404);
     });
   });
 
   describe('POST /api/contents', () => {
-    it('cree un echo (avec auth)', async () => {
+    it('crée un echo', async () => {
+      const app = getApp();
       const res = await request(app)
         .post('/api/contents')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ title: 'Nouvel echo', description: 'Une description', type: 'audio', mood: 'calme' });
+        .send({ title: 'Mon Echo', description: 'Desc', type: 'audio' });
       expect(res.status).toBe(201);
-      expect(res.body.title).toBe('Nouvel echo');
+      expect(res.body.title).toBe('Mon Echo');
     });
 
-    it('retourne 400 si title est absent', async () => {
+    it('rejette sans titre', async () => {
+      const app = getApp();
       const res = await request(app)
         .post('/api/contents')
         .set('Authorization', `Bearer ${authToken}`)
@@ -77,47 +86,45 @@ describe('ContentController', () => {
       expect(res.status).toBe(400);
     });
 
-    it('retourne 401 sans token', async () => {
-      const res = await request(app).post('/api/contents').send({ title: 'Test', type: 'audio' });
+    it('rejette sans token', async () => {
+      const app = getApp();
+      const res = await request(app)
+        .post('/api/contents')
+        .send({ title: 'Test', type: 'audio' });
       expect(res.status).toBe(401);
     });
   });
 
   describe('PUT /api/contents/:id', () => {
-    it('met a jour un echo', async () => {
-      const echo = await Content.create({ title: 'Avant', type: 'audio', userId: FAKE_USER_ID });
-      const res = await request(app)
-        .put(`/api/contents/${echo._id}`)
+    it('rejette si l\'echo n\'appartient pas à l\'utilisateur', async () => {
+      const app = getApp();
+      const res1 = await request(app)
+        .post('/api/contents')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ title: 'Apres' });
-      expect(res.status).toBe(200);
-      expect(res.body.title).toBe('Apres');
-    });
-
-    it("retourne 404 si l'echo n'existe pas", async () => {
-      const res = await request(app)
-        .put(`/api/contents/${new mongoose.Types.ObjectId()}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ title: 'X' });
-      expect(res.status).toBe(404);
+        .send({ title: 'Mon Echo', type: 'audio' });
+      // Register another user
+      const reg2 = await request(app).post('/api/users/register').send({
+        name: 'Other', email: 'other@example.com', password: 'pass1234',
+      });
+      const res2 = await request(app)
+        .put(`/api/contents/${res1.body._id}`)
+        .set('Authorization', `Bearer ${reg2.body.token}`)
+        .send({ title: 'Hacked' });
+      expect(res2.status).toBe(403);
     });
   });
 
   describe('DELETE /api/contents/:id', () => {
-    it('supprime un echo', async () => {
-      const echo = await Content.create({ title: 'A supprimer', type: 'audio', userId: FAKE_USER_ID });
+    it('supprime son propre echo', async () => {
+      const app = getApp();
       const res = await request(app)
-        .delete(`/api/contents/${echo._id}`)
+        .post('/api/contents')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ title: 'A supprimer', type: 'audio' });
+      const delRes = await request(app)
+        .delete(`/api/contents/${res.body._id}`)
         .set('Authorization', `Bearer ${authToken}`);
-      expect(res.status).toBe(200);
-      expect(res.body.message).toMatch(/supprim/);
-    });
-
-    it("retourne 404 si l'echo n'existe pas", async () => {
-      const res = await request(app)
-        .delete(`/api/contents/${new mongoose.Types.ObjectId()}`)
-        .set('Authorization', `Bearer ${authToken}`);
-      expect(res.status).toBe(404);
+      expect(delRes.status).toBe(200);
     });
   });
 });

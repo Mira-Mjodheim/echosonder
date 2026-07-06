@@ -7,7 +7,7 @@ router.post('/register', register);
 router.post('/login',    login);
 router.get('/me',        auth, getProfile);
 router.get('/',          auth, getUsers);
-router.get('/:id',       getUser);
+router.get('/:id',       auth, getUser);
 router.put('/:id',       auth, updateUser);
 router.delete('/:id',    auth, deleteUser);
 
