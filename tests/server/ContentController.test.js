@@ -6,6 +6,7 @@ let mongoServer;
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
+  process.env.MONGO_URI = mongoServer.getUri();
   await mongoose.connect(mongoServer.getUri());
 });
 
@@ -16,9 +17,9 @@ afterAll(async () => {
 
 // Lazy-load app after mongoose is connected
 const getApp = () => {
-  // Clear the require cache to get a fresh app with the connected mongoose
   delete require.cache[require.resolve('../../server/app')];
-  return require('../../server/app');
+  const { app } = require('../../server/app');
+  return app;
 };
 
 const Content = require('../../server/models/Content');
@@ -102,7 +103,6 @@ describe('ContentController', () => {
         .post('/api/contents')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ title: 'Mon Echo', type: 'audio' });
-      // Register another user
       const reg2 = await request(app).post('/api/users/register').send({
         name: 'Other', email: 'other@example.com', password: 'pass1234',
       });

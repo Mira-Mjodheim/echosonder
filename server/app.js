@@ -23,9 +23,12 @@ const authLimiter = rateLimit({
 app.use('/api/users/login', authLimiter);
 app.use('/api/users/register', authLimiter);
 
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('Connexion à MongoDB réussie'))
-  .catch(err => console.error('Erreur de connexion à MongoDB', err));
+// Defer MongoDB connection so tests can use mongodb-memory-server
+const connectDb = () => {
+  mongoose.connect(MONGO_URI)
+    .then(() => console.log('Connexion à MongoDB réussie'))
+    .catch(err => console.error('Erreur de connexion à MongoDB', err));
+};
 
 app.use('/api/contents', require('./routes/content'));
 app.use('/api/users',    require('./routes/user'));
@@ -36,7 +39,8 @@ app.use((err, req, res, _next) => {
 });
 
 if (require.main === module) {
+  connectDb();
   app.listen(PORT, () => console.log(`EchoSonder démarré sur le port ${PORT}`));
 }
 
-module.exports = app;
+module.exports = { app, connectDb };
