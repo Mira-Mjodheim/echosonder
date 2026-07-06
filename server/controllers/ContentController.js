@@ -1,5 +1,6 @@
 const Content = require('../models/Content');
 const mongoose = require('mongoose');
+const { detectMood, embed, cosineSimilarity } = require('../services/ai');
 
 const OWNERSHIP_ERROR = { message: 'Non autorisé — cet écho ne vous appartient pas' };
 
@@ -35,7 +36,15 @@ const createContent = async (req, res) => {
     if (!userId) {
       return res.status(401).json({ message: 'Authentification requise' });
     }
-    const content = new Content({ title, description, audioUrl, duration, mood, tags, type, userId });
+
+    // Auto-detect mood if not provided
+    const finalMood = mood && mood !== 'autre' ? mood : await detectMood(title, description);
+    const embedding = await embed(`${title} ${description || ''}`);
+
+    const content = new Content({
+      title, description, audioUrl, duration,
+      mood: finalMood, tags, type, userId, embedding,
+    });
     await content.save();
     res.status(201).json(content);
   } catch (err) {
@@ -51,8 +60,16 @@ const updateContent = async (req, res) => {
     if (!content) return res.status(404).json({ message: 'Écho non trouvé' });
     if (content.userId.toString() !== req.user.userId)
       return res.status(403).json(OWNERSHIP_ERROR);
+
     Object.assign(content, req.body);
     content.updatedAt = new Date();
+
+    // Regenerate mood + embedding if title/description changed
+    if (req.body.title || req.body.description) {
+      content.mood = await detectMood(content.title, content.description);
+      content.embedding = await embed(`${content.title} ${content.description || ''}`);
+    }
+
     await content.save();
     res.json(content);
   } catch (err) {
@@ -75,4 +92,53 @@ const deleteContent = async (req, res) => {
   }
 };
 
-module.exports = { getAllContents, getContentById, createContent, updateContent, deleteContent };
+// ── Discovery: find similar echos ──────────────────────────────────
+
+const discoverSimilar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ message: 'ID invalide' });
+
+    const source = await Content.findById(id).select('+embedding');
+    if (!source || !source.embedding)
+      return res.status(404).json({ message: 'Écho source non trouvé ou sans embedding' });
+
+    const candidates = await Content.find({ _id: { $ne: id } })
+      .select('+embedding')
+      .populate('userId', '_id name email');
+
+    const scored = candidates
+      .filter(c => c.embedding && c.embedding.length > 0)
+      .map(c => ({
+        ...c.toObject(),
+        _score: cosineSimilarity(source.embedding, c.embedding),
+      }))
+      .filter(c => c._score > 0.4)
+      .sort((a, b) => b._score - a._score)
+      .slice(0, 10);
+
+    for (const c of scored) delete c.embedding;
+    res.json(scored);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de la découverte' });
+  }
+};
+
+const discoverByMood = async (req, res) => {
+  try {
+    const { mood } = req.params;
+    const contents = await Content.find({ mood })
+      .populate('userId', '_id name email')
+      .sort('-createdAt')
+      .limit(20);
+    res.json(contents);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de la découverte par mood' });
+  }
+};
+
+module.exports = {
+  getAllContents, getContentById, createContent, updateContent, deleteContent,
+  discoverSimilar, discoverByMood,
+};

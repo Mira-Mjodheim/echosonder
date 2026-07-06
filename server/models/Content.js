@@ -39,6 +39,11 @@ const contentSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  embedding: {
+    type: [Number],
+    default: undefined,
+    select: false
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
