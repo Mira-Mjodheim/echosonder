@@ -61,7 +61,11 @@ const updateContent = async (req, res) => {
     if (content.userId.toString() !== req.user.userId)
       return res.status(403).json(OWNERSHIP_ERROR);
 
-    Object.assign(content, req.body);
+    const editableFields = ['title', 'description', 'audioUrl', 'duration', 'mood', 'tags', 'type'];
+    for (const field of editableFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field))
+        content[field] = req.body[field];
+    }
     content.updatedAt = new Date();
 
     // Regenerate mood + embedding if title/description changed

@@ -97,6 +97,39 @@ describe('ContentController', () => {
   });
 
   describe('PUT /api/contents/:id', () => {
+    it('modifie les champs autorisés sans modifier les métadonnées internes', async () => {
+      const app = getApp();
+      const created = await request(app)
+        .post('/api/contents')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ title: 'Mon Echo', type: 'audio' });
+      expect(created.status).toBe(201);
+      const original = await Content.findById(created.body._id).select('+embedding');
+
+      const res = await request(app)
+        .put(`/api/contents/${created.body._id}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          audioUrl: '/audio/echo.ogg', duration: 42, mood: 'calme',
+          tags: ['nature'], type: 'ambient',
+          userId: new mongoose.Types.ObjectId().toString(),
+          createdAt: '2000-01-01T00:00:00.000Z',
+          updatedAt: '2000-01-01T00:00:00.000Z',
+          embedding: [1, 0],
+        });
+
+      expect(res.status).toBe(200);
+      const updated = await Content.findById(created.body._id).select('+embedding');
+      expect(updated.toObject()).toMatchObject({
+        title: original.title, description: original.description,
+        audioUrl: '/audio/echo.ogg', duration: 42, mood: 'calme',
+        tags: ['nature'], type: 'ambient',
+        userId: original.userId, createdAt: original.createdAt,
+        embedding: original.embedding,
+      });
+      expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(original.updatedAt.getTime());
+    });
+
     it('rejette si l\'echo n\'appartient pas à l\'utilisateur', async () => {
       const app = getApp();
       const res1 = await request(app)
