@@ -47,13 +47,15 @@ npm run client
 ```
 ├── client/          # Application React
 │   └── src/
-│       ├── components/  # ContentEditor, ContentList, UserProfile
+│       ├── actions/     # followActions, feedActions
+│       ├── components/  # ContentEditor, ContentList, UserProfile, FollowButton, Feed, ContentCard
 │       └── containers/  # App
 ├── server/          # API Express
 │   ├── controllers/ # ContentController, UserController
 │   ├── middleware/  # auth (JWT)
 │   ├── models/      # Content, User
-│   └── routes/      # /api/contents, /api/users
+│   ├── routes/      # /api/contents, /api/users
+│   └── services/    # followService (abonnements et fil)
 └── tests/           # Tests serveur (Jest + Supertest)
 ```
 
@@ -66,6 +68,17 @@ npm run client
 | POST | `/api/users/register` | Inscription |
 | POST | `/api/users/login` | Connexion → renvoie un JWT |
 | GET | `/api/users/me` | Profil (auth requis) |
+
+### Abonnements
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| POST | `/api/users/:id/follow` | Suivre un utilisateur (auth requis) → renvoie son profil avec `followersCount` et `followingCount` |
+| POST | `/api/users/:id/unfollow` | Ne plus suivre un utilisateur (auth requis) → renvoie son profil avec les compteurs à jour |
+| GET | `/api/users/feed?page=&limit=` | Fil des échos des utilisateurs suivis, du plus récent au plus ancien (auth requis) |
+
+`/api/users/feed` renvoie `{ contents, page, limit, total, hasMore }`. `page` vaut 1 par défaut, `limit` 20 par défaut et 50 au maximum.
+Un utilisateur ne peut pas se suivre lui-même.
 
 ### Échos
 

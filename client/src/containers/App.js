@@ -1,18 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useDispatch } from 'react-redux';
 import ContentEditor from '../components/ContentEditor';
 import ContentList from '../components/ContentList';
+import Feed from '../components/Feed';
 import UserProfile from '../components/UserProfile';
+import { getProfile } from '../utils/api';
 
 function App() {
+  const dispatch = useDispatch();
   const [user, setUser] = useState(null);
   const [contents, setContents] = useState([]);
   const [selectedContent, setSelectedContent] = useState(null);
+  const [path, setPath] = useState(window.location.pathname);
 
   useEffect(() => {
-    axios.get('/api/users/me')
-      .then(response => {
-        setUser(response.data);
+    const onPopState = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigate = (to) => {
+    window.history.pushState({}, '', to);
+    setPath(to);
+  };
+
+  useEffect(() => {
+    getProfile()
+      .then(profile => {
+        setUser(profile);
+        dispatch({ type: 'SET_CURRENT_USER', payload: profile });
       })
       .catch(error => {
         console.error(error);
@@ -63,20 +80,33 @@ function App() {
 
   return (
     <div>
-      {user && (
-        <UserProfile user={user} />
-      )}
-      <ContentList
-        contents={contents}
-        onSelectContent={handleSelectContent}
-      />
-      {selectedContent && (
-        <ContentEditor
-          content={selectedContent}
-          onCreateContent={handleCreateContent}
-          onUpdateContent={handleUpdateContent}
-          onDeleteContent={handleDeleteContent}
-        />
+      <nav>
+        <button onClick={() => navigate('/')}>Accueil</button>
+        <button onClick={() => navigate('/feed')}>Fil d'actualité</button>
+      </nav>
+      {path === '/feed' ? (
+        <Feed />
+      ) : (
+        <>
+          {user && (
+            <UserProfile user={user} />
+          )}
+          <ContentList
+            contents={contents}
+            onSelectContent={handleSelectContent}
+          />
+          {selectedContent?.userId?._id && selectedContent.userId._id !== user?._id && (
+            <UserProfile user={selectedContent.userId} />
+          )}
+          {selectedContent && (
+            <ContentEditor
+              content={selectedContent}
+              onCreateContent={handleCreateContent}
+              onUpdateContent={handleUpdateContent}
+              onDeleteContent={handleDeleteContent}
+            />
+          )}
+        </>
       )}
     </div>
   );

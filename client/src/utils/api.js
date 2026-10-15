@@ -24,5 +24,8 @@ export const getUsers = () => api.get('/users').then((r) => r.data);
 export const getUser = (id) => api.get(`/users/${id}`).then((r) => r.data);
 export const updateUser = (id, data) => api.put(`/users/${id}`, data).then((r) => r.data);
 export const deleteUser = (id) => api.delete(`/users/${id}`).then((r) => r.data);
+export const followUser = (id) => api.post(`/users/${id}/follow`).then((r) => r.data);
+export const unfollowUser = (id) => api.post(`/users/${id}/unfollow`).then((r) => r.data);
+export const getFeed = (page, limit) => api.get('/users/feed', { params: { page, limit } }).then((r) => r.data);
 
 export default api;

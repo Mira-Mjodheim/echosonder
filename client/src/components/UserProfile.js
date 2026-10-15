@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useSelector } from 'react-redux';
+import FollowButton from './FollowButton';
 
 const UserProfile = ({ user: propUser }) => {
+  const currentUserId = useSelector((state) => state.user.currentUser?._id);
   const [user, setUser] = useState(propUser || {});
   const [loading, setLoading] = useState(!propUser);
   const [error, setError] = useState(null);
@@ -39,6 +42,7 @@ const UserProfile = ({ user: propUser }) => {
       <h1>Profil de {user.name}</h1>
       <p>Email : {user.email}</p>
       <p>Bio : {user.bio || '—'}</p>
+      {currentUserId && user._id && user._id !== currentUserId && <FollowButton userId={user._id} />}
     </div>
   );
 };

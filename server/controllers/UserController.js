@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+const followService = require('../services/followService');
 
 const secret = () => process.env.JWT_SECRET || 'secret-echosonder';
 const sign = (userId) => jwt.sign({ userId }, secret(), { expiresIn: '7d' });
@@ -90,10 +92,52 @@ const deleteUser = async (req, res) => {
       return res.status(403).json({ message: 'Non autorisé' });
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    await followService.removeFollowRelations(user._id);
     res.json({ message: 'Utilisateur supprimé avec succès' });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-module.exports = { register, login, getProfile, getUsers, getUser, updateUser, deleteUser };
+const followUser = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ message: 'ID invalide' });
+    if (req.params.id === req.user.userId)
+      return res.status(400).json({ message: 'Vous ne pouvez pas vous suivre vous-même' });
+    const profile = await followService.follow(req.user.userId, req.params.id);
+    if (!profile) return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    res.json(profile);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+const unfollowUser = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ message: 'ID invalide' });
+    if (req.params.id === req.user.userId)
+      return res.status(400).json({ message: 'Vous ne pouvez pas vous désabonner de vous-même' });
+    const profile = await followService.unfollow(req.user.userId, req.params.id);
+    if (!profile) return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    res.json(profile);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+const getFeed = async (req, res) => {
+  try {
+    const feed = await followService.getFeed(req.user.userId, req.query);
+    if (!feed) return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    res.json(feed);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de la récupération du fil' });
+  }
+};
+
+module.exports = {
+  register, login, getProfile, getUsers, getUser, updateUser, deleteUser,
+  followUser, unfollowUser, getFeed,
+};
