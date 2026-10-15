@@ -71,13 +71,17 @@ const getUser = async (req, res) => {
   }
 };
 
+const EDITABLE_USER_FIELDS = ['name', 'email', 'profilePicture', 'bio'];
+
 const updateUser = async (req, res) => {
   try {
     if (req.params.id !== req.user.userId)
       return res.status(403).json({ message: 'Non autorisé' });
-    const updates = { ...req.body };
-    delete updates.password;
-    delete updates.role;
+    const updates = {};
+    for (const field of EDITABLE_USER_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field))
+        updates[field] = req.body[field];
+    }
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select('-password');
     if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé' });
     res.json(user);

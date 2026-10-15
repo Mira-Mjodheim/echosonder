@@ -125,6 +125,22 @@ describe('UserController', () => {
       expect(res.body).toHaveProperty('name', 'Updated Name');
     });
 
+    it('ignore les champs non modifiables comme following, followers ou role', async () => {
+      const alice = await createUser('Alice', 'alice@example.com');
+      const bob = await createUser('Bob', 'bob@example.com');
+      const res = await request(app)
+        .put(`/api/users/${alice.id}`)
+        .set('Authorization', `Bearer ${alice.token}`)
+        .send({ name: 'Alice 2', following: [bob.id], followers: [bob.id], role: 'admin' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('name', 'Alice 2');
+      const aliceDoc = await User.findById(alice.id);
+      expect(aliceDoc.following).toHaveLength(0);
+      expect(aliceDoc.followers).toHaveLength(0);
+      expect(aliceDoc.role).toBe('user');
+    });
+
     it('retourne 401 sans token', async () => {
       const res = await request(app)
         .put('/api/users/000000000000000000000000')
